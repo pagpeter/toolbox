@@ -6,7 +6,7 @@ const tools = [
     title: "Base64 encoder",
     subtitle: "A simple ASCII to Base64 encoding utility",
     func: (i) => btoa(i),
-    similar: ["b64_decoder"],
+    similar: ["b64_decode"],
   },
   {
     name: "b64_decoder",
@@ -73,6 +73,16 @@ const tools = [
     subtitle:
       "An utility for converting raw HTTP headers (for example from charles) to a JSON object",
     similar: ["uuid_analyzer", "jwt_decoder"],
+    func: (i) =>
+      JSON.stringify(
+        i
+          .split("\n")
+          .map((e) => e.split(": "))
+          .filter((e) => e.length === 2 && !e[0].startsWith(":"))
+          .reduce((a, v) => ({ ...a, [v[0]]: v[1] }), new Map()),
+        null,
+        "\t"
+      ),
   },
 ];
 

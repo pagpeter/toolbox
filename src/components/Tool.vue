@@ -50,8 +50,10 @@ watch(route, () => mount(route));
       />
     </div>
 
-    <h2 class="text-2xl font-bold mx-5 mt-7 mb-3">Similar tools</h2>
-    <div class="grid grid-cols-4">
+    <h2 v-if="similarOnes.length > 0" class="text-2xl font-bold mx-5 mt-7 mb-3">
+      Similar tools
+    </h2>
+    <div v-if="similarOnes.length > 0" class="grid grid-cols-4">
       <div v-for="sim in similarOnes" class="m-2">
         <router-link :to="`/utils/${sim.name}`">
           <ToolField :title="sim.title" :subtitle="sim.subtitle" />

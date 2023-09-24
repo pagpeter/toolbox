@@ -8,7 +8,7 @@ const tools = Tools();
 <template>
   <div>
     <h1 class="text-3xl text-center m-5 font-black">Debugging ToolBox</h1>
-    <div class="grid grid-cols-4">
+    <div class="grid lg:grid-cols-4 sm:grid-cols-2 grid-cols-1">
       <div v-for="t in tools" class="m-2">
         <router-link :to="`/utils/${t.name}`">
           <ToolField :title="t.title" :subtitle="t.subtitle" />

@@ -60,12 +60,33 @@ const tools = [
     subtitle:
       "An utility for getting all information out of an UUID (timestamp + version)",
     similar: ["jwt_decoder"],
+    func: (i) => {
+      if (i.length !== 36) return "Invalid UUID";
+      const blocks = i.split("-");
+      if (blocks.length !== 5) return "Invalid UUID";
+      const version = blocks[2][0];
+
+      return `UUID: ${i}\n\nVersion: ${version}\nTimestamp: WIP`;
+    },
   },
   {
     name: "jwt_decoder",
     title: "JWT decoder",
     subtitle: "An utility for decoding a JSON Web Token (JWT)",
     similar: ["uuid_analyzer"],
+    func: (i) => {
+      const meta = JSON.stringify(
+        JSON.parse(atob(i.split(".")[0])),
+        null,
+        "\t"
+      );
+      const main = JSON.stringify(
+        JSON.parse(atob(i.split(".")[1])),
+        null,
+        "\t"
+      );
+      return `Meta information:\n${meta}\n\nEncoded data:\n${main}`;
+    },
   },
   {
     name: "header_formatter",

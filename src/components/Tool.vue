@@ -11,6 +11,7 @@ let similarOnes = [];
 let tool = {};
 
 const computeVal = (input) => {
+  if (!input) return "  ";
   try {
     return tool.func(input);
   } catch (e) {

@@ -1,19 +1,16 @@
 <script setup>
 import { useRoute } from "vue-router";
-import { ref } from "vue";
+import { ref, onMounted, watch } from "vue";
 import TextField from "./utils/TextField.vue";
 import ToolField from "./utils/ToolField.vue";
 import Tools from "../tools";
 
 const tools = Tools();
-
-const route = useRoute();
-const tool = route.meta.tool;
-
 const value = ref("");
+let similarOnes = [];
+let tool = {};
 
 const computeVal = (input) => {
-  console.log(tool.name, "compute:", input);
   try {
     return tool.func(input);
   } catch (e) {
@@ -22,7 +19,15 @@ const computeVal = (input) => {
     return e.message;
   }
 };
-const similarOnes = tool.similar?.map((s) => tools.find((x) => s === x.name));
+
+const mount = (route) => {
+  tool = route?.meta.tool;
+  similarOnes = tool.similar?.map((s) => tools.find((x) => s === x.name));
+};
+
+mount(useRoute());
+const route = useRoute();
+watch(route, () => mount(route));
 </script>
 
 <template>

@@ -5,14 +5,14 @@ const tools = [
     name: "b64_encode",
     title: "Base64 encoder",
     subtitle: "A simple ASCII to Base64 encoding utility",
-    func: atob,
+    func: (i) => btoa(i),
     similar: ["b64_decoder"],
   },
   {
     name: "b64_decoder",
     title: "Base64 decoder",
     subtitle: "A simple Base64 to text decoding utility",
-    func: btoa,
+    func: (i) => atob(i),
     similar: ["b64_encode"],
   },
   {

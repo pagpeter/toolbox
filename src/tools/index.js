@@ -9,7 +9,7 @@ const tools = [
     similar: ["b64_decode"],
   },
   {
-    name: "b64_decoder",
+    name: "b64_decode",
     title: "Base64 decoder",
     subtitle: "A simple Base64 to text decoding utility",
     func: (i) => atob(i),

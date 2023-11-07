@@ -7,5 +7,6 @@ export default defineConfig({
   define: {
     "process.env.BABEL_TYPES_8_BREAKING": "false",
     "Buffer.isBuffer": (...args) => true,
+    "process.platform": "'linux'",
   },
 });

@@ -27,7 +27,8 @@ const computeVal = (input) => {
   if (!input) return "  ";
   try {
     const cnfg = {};
-    tool.value.config.forEach((e) => (cnfg[e.name] = e.val));
+    if (tool.value?.config)
+      tool.value?.config?.forEach((e) => (cnfg[e.name] = e.val));
     return tool.value.func(input, cnfg);
   } catch (e) {
     return e.message;

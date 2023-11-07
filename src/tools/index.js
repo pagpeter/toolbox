@@ -1,4 +1,5 @@
 import js_beautify from "js-beautify";
+import deobfuscate from "./deobfuscate";
 
 const tools = [
   {
@@ -52,7 +53,7 @@ const tools = [
     title: "JavaScript formatter",
     subtitle: "An utility for formatting/verifiying ugly JavaScript",
     func: (i) => js_beautify(i, { indent_size: 2, space_in_empty_paren: true }),
-    similar: ["json_formatter"],
+    similar: ["json_formatter", "js_deobfuscator"],
   },
   {
     name: "uuid_analyzer",
@@ -104,6 +105,20 @@ const tools = [
         null,
         "\t"
       ),
+  },
+  {
+    name: "js_deobfuscator",
+    title: "JavaScript deobfuscator",
+    subtitle:
+      "An utility that converts ugly JavaScript into more readable code",
+    similar: ["js_formatter", "json_formatter"],
+    func: deobfuscate,
+    config: [
+      { title: "Replace hex", name: "replace_hex", val: true },
+      { title: "Remove unused", name: "delete_unused", val: true },
+      { title: "Beautify", name: "beautify", val: true },
+      { title: "Rename", name: "rename", val: false },
+    ],
   },
 ];
 

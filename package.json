@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "deob-transformations": "^1.1.0",
     "js-beautify": "^1.14.9",
     "vue": "^3.3.4",
     "vue-router": "^4.0.13"

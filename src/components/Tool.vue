@@ -1,6 +1,6 @@
 <script setup>
 import { useRoute } from "vue-router";
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, nextTick } from "vue";
 import TextField from "./utils/TextField.vue";
 import ToolField from "./utils/ToolField.vue";
 import Tools from "../tools";
@@ -8,22 +8,35 @@ import Tools from "../tools";
 const tools = Tools();
 const value = ref("");
 let similarOnes = [];
-let tool = {};
+let tool = ref({});
+
+const getInputType = (i) => {
+  switch (typeof i) {
+    case "boolean":
+      return "checkbox";
+    case "number":
+      return "number";
+    case "string":
+      return "text";
+    default:
+      return "text";
+  }
+};
 
 const computeVal = (input) => {
   if (!input) return "  ";
   try {
-    return tool.func(input);
+    const cnfg = {};
+    tool.value.config.forEach((e) => (cnfg[e.name] = e.val));
+    return tool.value.func(input, cnfg);
   } catch (e) {
-    console.log(tool.func);
-    console.log(e);
     return e.message;
   }
 };
 
 const mount = (route) => {
-  tool = route?.meta.tool;
-  similarOnes = tool.similar?.map((s) => tools.find((x) => s === x.name));
+  tool = ref(route?.meta.tool);
+  similarOnes = tool.value.similar?.map((s) => tools.find((x) => s === x.name));
 };
 
 mount(useRoute());
@@ -51,20 +64,47 @@ watch(route, () => mount(route));
       />
     </div>
 
-    <h2
-      v-if="similarOnes?.length > 0"
-      class="text-2xl font-bold mx-5 mt-7 mb-3"
-    >
-      Similar tools
-    </h2>
-    <div v-if="similarOnes?.length > 0" class="grid grid-cols-4">
-      <div v-for="sim in similarOnes" class="m-2">
-        <router-link :to="`/utils/${sim.name}`">
-          <ToolField :title="sim.title" :subtitle="sim.subtitle" />
-        </router-link>
+    <div v-if="tool.config">
+      <h2 class="text-2xl font-bold mx-5 mt-7 mb-3">Config</h2>
+      <div class="grid grid-cols-5">
+        <div
+          v-for="(cnfg, i) in tool.config"
+          :key="cnfg.name"
+          @click="
+            typeof cnfg.val === 'boolean'
+              ? ((cnfg.val = !cnfg.val), nextTick(computeVal, 50))
+              : null
+          "
+          class="m-2 flex gap-2 bg-gray-800 p-2 rounded-xl shadow-xl justify-center items-center cursor-pointer"
+        >
+          <span class="my-auto">{{ cnfg.title }}</span>
+          <input
+            :key="cnfg._c"
+            :type="getInputType(cnfg.val)"
+            v-model="cnfg.val"
+            class="my-auto"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div v-if="similarOnes?.length > 0">
+      <h2 class="text-2xl font-bold mx-5 mt-7 mb-3">Similar tools</h2>
+      <div class="grid grid-cols-4">
+        <div v-for="sim in similarOnes" class="m-2">
+          <router-link :to="`/utils/${sim.name}`">
+            <ToolField :title="sim.title" :subtitle="sim.subtitle" />
+          </router-link>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
-<style scoped></style>
+<style>
+* {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
+}
+</style>

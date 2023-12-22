@@ -4,7 +4,6 @@ import { ref, onMounted, watch, nextTick } from "vue";
 import TextField from "./utils/TextField.vue";
 import ToolField from "./utils/ToolField.vue";
 import Tools from "../tools";
-
 const tools = Tools();
 const value = ref("");
 let similarOnes = [];
@@ -24,7 +23,7 @@ const getInputType = (i) => {
 };
 
 const computeVal = (input) => {
-  if (!input) return "  ";
+  if (!input) return "";
   try {
     const cnfg = {};
     if (tool.value?.config)
@@ -55,12 +54,13 @@ watch(route, () => mount(route));
     <div class="grid grid-cols-2 gap-2 m-2">
       <TextField
         class="m-2 text-center h-64"
-        placeholder="Input..."
+        :placeholder="tool.placeholder"
         v-model="value"
       />
       <TextField
         class="m-2 text-center"
         :set-value="computeVal(value)"
+        :placeholder="computeVal(tool.placeholder)"
         disabled="true"
       />
     </div>

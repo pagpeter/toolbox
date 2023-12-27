@@ -205,6 +205,13 @@ const tools = [
     type: ToolType.EXTERNAL,
   },
   {
+    title: "CyberChef",
+    subtitle:
+      "The Cyber Swiss Army Knife, allows you to combine ~300 text operations",
+    link: "https://gchq.github.io/CyberChef/",
+    type: ToolType.EXTERNAL,
+  },
+  {
     title: "Donate",
     subtitle: "Donate something to keep this site running",
     link: "https://buymeacoffee.com/peeet",

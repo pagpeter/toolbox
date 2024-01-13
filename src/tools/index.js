@@ -159,7 +159,7 @@ const tools = [
         .map(([k, v]) => `\t"${k}":\t\t{"${v.replaceAll('"', '\\"')}"},\n`)
         .join("");
 
-      return `req.Header = http.Header{\n${headers}\thttp.HeaderOrderKey: { ${order} }\n}`;
+      return `req.Header = http.Header{\n${headers}\thttp.HeaderOrderKey: { ${order} },\n}`;
     },
     placeholder: `GET  /tools/header_formatter_fhttp HTTP/1.1\nHost: tools.peet.ws\nHello: World!`,
     type: ToolType.GENERAL,

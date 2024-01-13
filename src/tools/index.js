@@ -2,6 +2,17 @@ import js_beautify from "js-beautify";
 import deobfuscate from "./deobfuscate";
 import ToolType from "./types";
 
+const headerToCode = (i) =>
+  JSON.stringify(
+    i
+      .split("\n")
+      .map((e) => e.split(": "))
+      .filter((e) => e.length === 2 && !e[0].startsWith(":"))
+      .reduce((a, v) => ({ ...a, [v[0]]: v[1] }), new Map()),
+    null,
+    "\t"
+  );
+
 const tools = [
   {
     name: "b64_encode",
@@ -114,22 +125,45 @@ const tools = [
     title: "Header to code",
     subtitle:
       "An utility for converting raw HTTP headers (for example from charles) to a JSON object",
-    similar: ["uuid_analyzer", "jwt_decoder"],
-    func: (i) =>
-      JSON.stringify(
-        i
-          .split("\n")
-          .map((e) => e.split(": "))
-          .filter((e) => e.length === 2 && !e[0].startsWith(":"))
-          .reduce((a, v) => ({ ...a, [v[0]]: v[1] }), new Map()),
-        null,
-        "\t"
-      ),
+    similar: [
+      "uuid_analyzer",
+      "jwt_decoder",
+      "js_formatter",
+      "header_formatter_fhttp",
+    ],
+    func: headerToCode,
     placeholder: `GET  /tools/header_formatter HTTP/1\nHost: tools.peet.ws\nHello: World!`,
     type: ToolType.GENERAL,
   },
 
   // == ANTBOT RELATED ==
+  {
+    name: "header_formatter_fhttp",
+    title: "Header to code (fhttp)",
+    subtitle:
+      "An utility for converting raw HTTP headers (for example from charles) to valid Golang code (fhttp library)",
+    similar: [
+      "header_formatter",
+      "uuid_analyzer",
+      "jwt_decoder",
+      "js_formatter",
+    ],
+    func: (i) => {
+      const h = JSON.parse(headerToCode(i));
+
+      const order = Object.keys(h)
+        .map((k) => `"${k}"`)
+        .join(", ");
+
+      const headers = Object.entries(h)
+        .map(([k, v]) => `\t"${k}":\t\t{"${v.replaceAll('"', '\\"')}"},\n`)
+        .join("");
+
+      return `req.Header = http.Header{\n${headers}\thttp.HeaderOrderKey: { ${order} }\n}`;
+    },
+    placeholder: `GET  /tools/header_formatter HTTP/1\nHost: tools.peet.ws\nHello: World!`,
+    type: ToolType.GENERAL,
+  },
   {
     name: "js_deobfuscator",
     title: "JavaScript deobfuscator",
@@ -209,6 +243,12 @@ const tools = [
     subtitle:
       "The Cyber Swiss Army Knife, allows you to combine ~300 text operations",
     link: "https://gchq.github.io/CyberChef/",
+    type: ToolType.EXTERNAL,
+  },
+  {
+    title: "TLS-Client",
+    subtitle: "The best TLS client that serves all your needs",
+    link: "https://github.com/bogdanfinn/tls-client",
     type: ToolType.EXTERNAL,
   },
   {

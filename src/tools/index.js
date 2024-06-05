@@ -1,6 +1,39 @@
 import js_beautify from "js-beautify";
 import deobfuscate from "./deobfuscate";
 import ToolType from "./types";
+import LZString from "lz-string";
+
+function extractKey(script) {
+  const split = script.match(/en-us(.)/)[1];
+  const regex = new RegExp(
+    `\\${split}([a-zA-Z0-9\\+\\-\\$]{65})\\${split}`,
+    "i"
+  );
+  return script.match(regex)[1];
+}
+
+function getBaseValue(alphabet, character) {
+  var baseReverseDic = {};
+  if (!baseReverseDic[alphabet]) {
+    baseReverseDic[alphabet] = {};
+    for (var i = 0; i < alphabet.length; i++) {
+      baseReverseDic[alphabet][alphabet.charAt(i)] = i;
+    }
+  }
+  return baseReverseDic[alphabet][character];
+}
+
+const LZ = {
+  compress: (input, key) => {
+    return LZString._compress(input, 6, (a) => key.charAt(a));
+  },
+  decompress: (input, key) => {
+    input = input.replace(/ /g, "+");
+    return LZString._decompress(input.length, 32, (index) =>
+      getBaseValue(key, input.charAt(index))
+    );
+  },
+};
 
 const headerToCode = (i) =>
   JSON.stringify(
@@ -157,6 +190,7 @@ const tools = [
 
       const headers = Object.entries(h)
         .map(([k, v]) => `\t"${k}":\t\t{"${v.replaceAll('"', '\\"')}"},\n`)
+        .filter((a) => !a.toLowerCase().includes(`"cookie":`))
         .join("");
 
       return `req.Header = http.Header{\n${headers}\thttp.HeaderOrderKey: { ${order} },\n}`;
@@ -201,13 +235,25 @@ const tools = [
   //   similar: ["cf_decoder"],
   //   type: ToolType.ANTIBOT,
   // },
-  // {
-  //   name: "cf_decoder",
-  //   title: "CloudFlare decoder",
-  //   subtitle: "Decode CloudFlare payloads using your custom key (lz-encrypt)",
-  //   similar: ["cf_encoder"],
-  //   type: ToolType.ANTIBOT,
-  // },
+  {
+    name: "cf_decoder",
+    title: "CloudFlare decoder",
+    subtitle: "Decode Cloudflare payloads using a custom key (lz-encrypt)",
+    similar: [],
+    type: ToolType.ANTIBOT,
+    config: [{ title: "Encryption key or script", name: "key", val: "true" }],
+    func: (rawPayload, cnfg = {}) => {
+      let key = cnfg.key.length === 65 ? cnfg.key : extractKey(cnfg.key);
+      let payload = rawPayload
+        .split("=")[1]
+        .replaceAll("%2b", "+")
+        .replaceAll(" ", "+");
+
+      const res = LZ.decompress(payload, key);
+      if (!res) return "Invalid key for payload";
+      return JSON.stringify(JSON.parse(res), null, "\t");
+    },
+  },
 
   // == EXTERNAL ==
   {
@@ -249,12 +295,6 @@ const tools = [
     title: "TLS-Client",
     subtitle: "The best TLS client that serves all your needs",
     link: "https://github.com/bogdanfinn/tls-client",
-    type: ToolType.EXTERNAL,
-  },
-  {
-    title: "Donate",
-    subtitle: "Donate something to keep this site running",
-    link: "https://buymeacoffee.com/peeet",
     type: ToolType.EXTERNAL,
   },
 ];

@@ -76,15 +76,25 @@ watch(route, () => mount(route));
               ? ((cnfg.val = !cnfg.val), nextTick(computeVal, 50))
               : null
           "
-          class="m-2 flex gap-2 bg-gray-800 p-2 rounded-xl shadow-xl justify-center items-center cursor-pointer"
+          :class="`m-2 grid ${
+            typeof cnfg.val === 'boolean' ? 'grid-cols-2' : 'grid-cols-1'
+          } gap-2 bg-gray-800 p-2 rounded-xl shadow-xl justify-center items-center cursor-pointer`"
         >
           <span class="my-auto">{{ cnfg.title }}</span>
+
           <input
+            v-if="getInputType(cnfg.val) !== 'text'"
             :key="cnfg._c"
             :type="getInputType(cnfg.val)"
             v-model="cnfg.val"
             class="my-auto"
           />
+          <div v-else :key="cnfg._c + 1">
+            <textarea
+              v-model="cnfg.val"
+              class="bg-gray-700 w-full h-full rounded-xl shadow-xl resize-none p-2"
+            ></textarea>
+          </div>
         </div>
       </div>
     </div>

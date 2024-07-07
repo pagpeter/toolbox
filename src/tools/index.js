@@ -2,6 +2,7 @@ import js_beautify from "js-beautify";
 import deobfuscate from "./deobfuscate";
 import ToolType from "./types";
 import LZString from "lz-string";
+import tlsConverter from "./tlsConverter";
 
 function extractKey(script) {
   const split = script.match(/en-us(.)/)[1];
@@ -180,6 +181,7 @@ const tools = [
       "uuid_analyzer",
       "jwt_decoder",
       "js_formatter",
+      "tls_converter",
     ],
     func: (i) => {
       const h = JSON.parse(headerToCode(i));
@@ -228,20 +230,27 @@ const tools = [
   //   similar: ["px_encoder"],
   //   type: ToolType.ANTIBOT,
   // },
-  // {
-  //   name: "cf_encoder",
-  //   title: "CloudFlare encoder",
-  //   subtitle: "Encode CloudFlare payloads using your custom key (lz-encrypt)",
-  //   similar: ["cf_decoder"],
-  //   type: ToolType.ANTIBOT,
-  // },
+  {
+    name: "cf_encoder",
+    title: "CloudFlare encoder",
+    subtitle: "Encode CloudFlare payloads using your custom key (lz-encrypt)",
+    similar: ["cf_decoder"],
+    config: [{ title: "Encryption key or script", name: "key", val: "" }],
+    type: ToolType.ANTIBOT,
+    func: (payload, cnfg = {}) => {
+      let key = cnfg.key.length === 65 ? cnfg.key : extractKey(cnfg.key);
+      const res = LZ.compress(JSON.stringify(JSON.parse(payload)), key);
+      if (!res) return "Invalid key for payload";
+      return res;
+    },
+  },
   {
     name: "cf_decoder",
     title: "CloudFlare decoder",
     subtitle: "Decode Cloudflare payloads using a custom key (lz-encrypt)",
-    similar: [],
+    similar: ["cf_encoder"],
     type: ToolType.ANTIBOT,
-    config: [{ title: "Encryption key or script", name: "key", val: "true" }],
+    config: [{ title: "Encryption key or script", name: "key", val: "" }],
     func: (rawPayload, cnfg = {}) => {
       let key = cnfg.key.length === 65 ? cnfg.key : extractKey(cnfg.key);
       let payload = rawPayload
@@ -252,6 +261,22 @@ const tools = [
       const res = LZ.decompress(payload, key);
       if (!res) return "Invalid key for payload";
       return JSON.stringify(JSON.parse(res), null, "\t");
+    },
+  },
+  {
+    name: "tls_converter",
+    title: "JSON to uTLS",
+    subtitle:
+      "Convert JSON responses from tls.peet.ws/api/all to client profiles for github.com/bogdanfinn/tls-client",
+    similar: ["header_formatter_fhttp"],
+    type: ToolType.ANTIBOT,
+    func: (rawPayload, cnfg = {}) => {
+      try {
+        const j = JSON.parse(rawPayload);
+        return tlsConverter(j);
+      } catch (e) {
+        return e.message;
+      }
     },
   },
 

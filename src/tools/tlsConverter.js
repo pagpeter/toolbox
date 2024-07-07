@@ -8,6 +8,7 @@ const h2SettingsMapping = {
   MAX_CONCURRENT_STREAMS: "http2.SettingMaxConcurrentStreams",
   INITIAL_WINDOW_SIZE: "http2.SettingInitialWindowSize",
   MAX_HEADER_LIST_SIZE: "http2.SettingMaxHeaderListSize",
+  MAX_FRAME_SIZE: "http2.SettingMaxFrameSize",
 };
 
 const signatureSchemeMapping = {
@@ -112,6 +113,7 @@ const parseTLSExtension = (ext) => {
     "signed_certificate_timestamp (18)": () => "&tls.SCTExtension{}",
     "extended_master_secret (23)": () => "&tls.ExtendedMasterSecretExtension{}",
     "compress_certificate (27)": () => `&tls.UtlsCompressCertExtension{[]tls.CertCompressionAlgo{${expressionIndent(ext.algorithms.map(a => `${certCompressionMapping[getIntVal(a)] || getIntVal(a) + ` /* ${a} */`}`), 6)}}}`,
+    "record_size_limit (28)": () => `&tls.FakeRecordSizeLimitExtension{${"0x" + parseInt(ext.data).toString(16)}}`,
     "session_ticket (35)": () => `&tls.SessionTicketExtension{}`,
     "pre_shared_key (41)": () => "&tls.UtlsPreSharedKeyExtension{OmitEmptyPsk: true}",
     "supported_versions (43)": () => `&tls.SupportedVersionsExtension{[]uint16{${expressionIndent(ext.versions.filter(v => typeof v === "string").map(v => v.startsWith("TLS_GREASE") ? `tls.GREASE_PLACEHOLDER` : supportedVersionsMapping[v]), 6)}}}`,
@@ -159,8 +161,7 @@ export default (input) => {
     input.http2?.sent_frames
       ?.find((f) => f.frame_type === "SETTINGS")
       ?.settings?.map((e) => e.split(" = "))
-      ?.map((s) => ({ key: h2SettingsMapping[s[0]], value: parseInt(s[1]) })) ||
-    [];
+      ?.map((s) => ({ key: h2SettingsMapping[s[0]], value: parseInt(s[1]) })) || [];
 
   const extensions = input.tls.extensions.map((e) => parseTLSExtension(e));
 

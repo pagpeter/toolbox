@@ -1,4 +1,6 @@
-const arrayify = (arr) => arr.map((e) => `"${e}"`).join(", ");
+const stringArrayNoatation = (arr) => arr.map((e) => `"${e}"`).join(", ");
+const stringArrayNoatationIndent = (arr, startAt) => "\n" + "\t".repeat(startAt) + arr.map((e) => `"${e}"`).join(`,\n${"\t".repeat(startAt)}`) + ",\n" + "\t".repeat(startAt - 1);
+const expressionIndent = (arr, startAt) => "\n" + "\t".repeat(startAt) + arr.join(`,\n${"\t".repeat(startAt)}`) + ",\n" + "\t".repeat(startAt - 1);
 
 const h2SettingsMapping = {
   HEADER_TABLE_SIZE: "http2.SettingHeaderTableSize",
@@ -20,6 +22,32 @@ const signatureSchemeMapping = {
   ecdsa_secp521r1_sha512: "tls.ECDSAWithP521AndSHA512",
   rsa_pkcs1_sha1: "tls.PKCS1WithSHA1",
   ecdsa_sha1: "tls.ECDSAWithSHA1",
+};
+
+const renegotiationMapping = {
+  0: "tls.RenegotiateNever",
+  1: "tls.RenegotiateOnceAsClient",
+  2: "tls.RenegotiateFreelyAsClient",
+};
+
+const certCompressionMapping = {
+  1: "tls.CertCompressionZlib",
+  2: "tls.CertCompressionBrotli",
+  3: "tls.CertCompressionZstd",
+};
+
+const pskModeMapping = {
+  0: "tls.PskModePlain",
+  1: "tls.PskModeDHE",
+};
+
+const curveIDMapping = {
+  23: "tls.CurveP256",
+  24: "tls.CurveP384",
+  25: "tls.CurveP521",
+  29: "tls.X25519",
+  256: "tls.FAKEFFDHE2048",
+  257: "tls.FAKEFFDHE3072",
 };
 
 const specialCipherSuites = {
@@ -65,104 +93,37 @@ const supportedVersionsMapping = {
 
 const getIntVal = (key) => parseInt(key.split(" (")?.at(-1)?.split(")")?.[0]);
 
-const parseTlsExtension = (ext) => {
-  if (ext.name?.startsWith("TLS_GREASE")) return `&tls.UtlsGREASEExtension{}`;
-  switch (ext.name) {
-    case "server_name (0)":
-      return `&tls.SNIExtension{}`;
+const parseTLSExtension = (ext) => {
+  if (typeof ext.name === "string" && ext.name.startsWith("TLS_GREASE")) return `&tls.UtlsGREASEExtension{}`;
 
-    case "status_request (5)":
-      return `&tls.StatusRequestExtension{}`;
+  const extensionParsers = {
+    "server_name (0)": () => `&tls.SNIExtension{}`,
+    "status_request (5)": () => `&tls.StatusRequestExtension{}`,
+    "supported_groups (10)": () => `&tls.SupportedCurvesExtension{[]tls.CurveID{${expressionIndent(ext.supported_groups.filter(v => typeof v === "string").map(v => v.startsWith("TLS_GREASE") ? `tls.CurveID(tls.GREASE_PLACEHOLDER)` : (curveIDMapping[getIntVal(v)] || `${getIntVal(v)} /* ${v} */`)), 6)}}}`,
+    "ec_point_formats (11)": () => `&tls.SupportedPointsExtension{SupportedPoints: []byte{${ext.elliptic_curves_point_formats.filter(v => typeof v === "string").map(v => v.startsWith("TLS_GREASE") ? `tls.GREASE_PLACEHOLDER` : v).join(", ")}}}`,
+    "signature_algorithms (13)": () => `&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{${expressionIndent(ext.signature_algorithms.filter(v => typeof v === "string").map(v => signatureSchemeMapping[v] || v), 6)}}}`,
+    "application_layer_protocol_negotiation (16)": () => `&tls.ALPNExtension{AlpnProtocols: []string{${stringArrayNoatation(ext.protocols)}}}`,
+    "signed_certificate_timestamp (18)": () => "&tls.SCTExtension{}",
+    "extended_master_secret (23)": () => "&tls.ExtendedMasterSecretExtension{}",
+    "compress_certificate (27)": () => `&tls.UtlsCompressCertExtension{[]tls.CertCompressionAlgo{${expressionIndent(ext.algorithms.map(a => `${certCompressionMapping[getIntVal(a)] || getIntVal(a) + ` /* ${a} */`}`), 6)}}}`,
+    "session_ticket (35)": () => `&tls.SessionTicketExtension{}`,
+    "pre_shared_key (41)": () => "&tls.UtlsPreSharedKeyExtension{OmitEmptyPsk: true}",
+    "supported_versions (43)": () => `&tls.SupportedVersionsExtension{[]uint16{${expressionIndent(ext.versions.filter(v => typeof v === "string").map(v => v.startsWith("TLS_GREASE") ? `tls.GREASE_PLACEHOLDER` : supportedVersionsMapping[v]), 6)}}}`,
+    "psk_key_exchange_modes (45)": () => `&tls.PSKKeyExchangeModesExtension{[]uint8{${expressionIndent([pskModeMapping[getIntVal(ext.PSK_Key_Exchange_Mode)] || getIntVal(ext.PSK_Key_Exchange_Mode)], 6)}}}`,
+    "key_share (51)": () => `&tls.KeyShareExtension{[]tls.KeyShare{${expressionIndent(ext.shared_keys.map(k => {
+      const key = Object.keys(k)[0];
+      let group = getIntVal(key);
+      // i see "Data: []byte{0}" in profile package so i added.
+      if (typeof key === "string" && key.startsWith("TLS_GREASE")) group = `tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}`;
+      if (curveIDMapping[group]) { group = curveIDMapping[group] } else { group = group + ` /* ${key} */` };
+      return `{Group: ${group}}`;
+    }), 6)}}}`,
+    "application_settings (17513)": () => `&tls.ApplicationSettingsExtension{SupportedProtocols: []string{${stringArrayNoatation(ext.protocols)}}}`,
+    "extensionEncryptedClientHello (boringssl) (65037)": () => `tls.BoringGREASEECH()`,
+    "extensionRenegotiationInfo (boringssl) (65281)": () => `&tls.RenegotiationInfoExtension{Renegotiation: ${renegotiationMapping[parseInt(ext.data)] || parseInt(ext.data)}}`,
+  };
 
-    case "supported_groups (10)":
-      return `&tls.SupportedCurvesExtension{Curves: []tls.CurveID{${ext.supported_groups
-        .map((v) => {
-          if (v.startsWith("TLS_GREASE"))
-            return `tls.CurveID(tls.GREASE_PLACEHOLDER)`;
-          else return getIntVal(v) + `/* ${v} */`;
-        })
-        .join(", ")}}}`;
-
-    case "ec_point_formats (11)":
-      return `&tls.SupportedPointsExtension{SupportedPoints: []uint8{${ext.elliptic_curves_point_formats
-        .map((v) => {
-          if (v.startsWith("TLS_GREASE")) return `tls.GREASE_PLACEHOLDER`;
-          else return v;
-        })
-        .join(", ")}}}`;
-
-    case "signature_algorithms (13)":
-      return `&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{${ext.signature_algorithms
-        .map(
-          (v) => signatureSchemeMapping[v] || `tls.NotImplemented /* ${v} */`
-        )
-        .join(", ")}}}`;
-
-    case "application_layer_protocol_negotiation (16)":
-      return `&tls.ALPNExtension{AlpnProtocols: []string{${arrayify(
-        ext.protocols
-      )}}}`;
-
-    case "signed_certificate_timestamp (18)":
-      return "&tls.SCTExtension{}";
-
-    case "extended_master_secret (23)":
-      return "&tls.ExtendedMasterSecretExtension{}";
-
-    case "compress_certificate (27)":
-      return `&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{${ext.algorithms
-        .map((a) => {
-          const val = getIntVal(a);
-          return `${val} /* ${a} */`;
-        })
-        .join(", ")}}}`;
-
-    case "session_ticket (35)":
-      return `&tls.SessionTicketExtension{}`;
-
-    case "pre_shared_key (41)":
-      return "&tls.UtlsPreSharedKeyExtension{OmitEmptyPsk: true}";
-
-    case "supported_versions (43)":
-      return `&tls.SupportedVersionsExtension{Versions: []uint16{${ext.versions
-        .map((v) => {
-          if (v.startsWith("TLS_GREASE")) return `tls.GREASE_PLACEHOLDER`;
-          else return supportedVersionsMapping[v];
-        })
-        .join(", ")}}}`;
-
-    case "psk_key_exchange_modes (45)":
-      return `&tls.PSKKeyExchangeModesExtension{Modes: []uint8{${getIntVal(
-        ext.PSK_Key_Exchange_Mode
-      )} /* ${ext.PSK_Key_Exchange_Mode} */}}`;
-
-    case "key_share (51)":
-      return `&tls.KeyShareExtension{KeyShares: []tls.KeyShare{${ext.shared_keys
-        .map((k) => {
-          let key = Object.keys(k)[0];
-          let group = getIntVal(key);
-          if (key?.startsWith("TLS_GREASE"))
-            group = `tls.CurveID(tls.GREASE_PLACEHOLDER)`;
-          return `{Group: ${group} /* ${key} */}`;
-        })
-        .join(", ")}}}`;
-
-    case "application_settings (17513)":
-      return `&tls.ApplicationSettingsExtension{SupportedProtocols: []string{${arrayify(
-        ext.protocols
-      )}}}`;
-
-    case "extensionEncryptedClientHello (boringssl) (65037)":
-      return `tls.BoringGREASEECH()`;
-
-    case "extensionRenegotiationInfo (boringssl) (65281)":
-      return `&tls.RenegotiationInfoExtension{Renegotiation: ${parseInt(
-        ext.data
-      )}}`;
-
-    default:
-      return `&tls.NotImplemented{/* ${JSON.stringify(ext)} */}`;
-  }
+  return extensionParsers[ext.name] ? extensionParsers[ext.name]() : `&tls.NotImplemented{/* ${JSON.stringify(ext)} */}`;
 };
 
 const parseCipherSuite = (c) => {
@@ -195,36 +156,40 @@ export default (input) => {
       ?.map((s) => ({ key: h2SettingsMapping[s[0]], value: parseInt(s[1]) })) ||
     [];
 
-  const extensions = input.tls.extensions.map((e) => parseTlsExtension(e));
+  const extensions = input.tls.extensions.map((e) => parseTLSExtension(e));
 
-  return `import (
+  return `
+import (
     "github.com/bogdanfinn/tls-client/profiles"
     "github.com/bogdanfinn/fhttp/http2"
     tls "github.com/bogdanfinn/utls"
 )
 
-var MyCustomClient = profiles.NewClientProfile(
+var MyCustomProfile = profiles.NewClientProfile(
 	tls.ClientHelloID{
-		Client:  "MyCustomClient",
+		Client:  "MyCustomProfile",
 		Version: "1",
 		Seed:    nil,
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
 			return tls.ClientHelloSpec{
-				CipherSuites:       []uint16{${ciphers.join(", \n")}},
-				CompressionMethods: []uint8{tls.CompressionNone}, // Not implemented in tools.peet.ws - check manually
-				Extensions:         []tls.TLSExtension{${extensions.join(", \n")}},
+				CipherSuites:       []uint16{${expressionIndent(ciphers, 5)}},
+${"\t\t\t\t"}// CompressionMethods is not implemented by tls.peet.ws, check manually
+				CompressionMethods: []uint8{${expressionIndent(["tls.CompressionNone"], 5)}},
+				Extensions:         []tls.TLSExtension{${expressionIndent(extensions, 5)}},
 			}, nil
 		},
 	},
-	map[http2.SettingID]uint32{${h2Settings
-    .map((e) => `${e.key}: ${e.value}`)
-    .join(", ")}}, 
-	[]http2.SettingID{${h2Settings.map((e) => e.key).join(", ")}},
-	[]string{${arrayify(h2PseudoHeaderOrder)}},
+	map[http2.SettingID]uint32{${expressionIndent(h2Settings.map((e) => `${e.key}: ${e.value}`), 2)}}, 
+	[]http2.SettingID{${expressionIndent(h2Settings.map((e) => e.key), 2)}},
+	[]string{${stringArrayNoatationIndent(h2PseudoHeaderOrder, 2)}},
 	uint32(${h2ConnectionFlow}),
-	[]http2.Priority{}, // Not implemented in tools.peet.ws - check manually
-	&http2.PriorityParam{Weight: ${h2HeaderPrio.weight - 1 || 0}, Exclusive: ${
-    h2HeaderPrio.exclusive === 1
-  }, StreamDep: ${h2HeaderPrio.depends_on || 0}},
-)`;
+${"\t"}// Priority is not implemented by tls.peet.ws, check manually
+	[]http2.Priority{},
+${"\t"}&http2.PriorityParam{
+${"\t\t"}StreamDep: ${h2HeaderPrio.depends_on || 0},
+${"\t\t"}Exclusive: ${h2HeaderPrio.exclusive === 1},
+${"\t\t"}Weight: ${h2HeaderPrio.weight - 1 || 0},
+${"\t"}},
+)
+`.trimStart().trimEnd();
 };

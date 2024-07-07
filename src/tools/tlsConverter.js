@@ -111,9 +111,12 @@ const parseTLSExtension = (ext) => {
     "signature_algorithms (13)": () => `&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{${expressionIndent(ext.signature_algorithms.filter(v => typeof v === "string").map(v => signatureSchemeMapping[v] || v), 6)}}}`,
     "application_layer_protocol_negotiation (16)": () => `&tls.ALPNExtension{AlpnProtocols: []string{${stringArrayNoatation(ext.protocols)}}}`,
     "signed_certificate_timestamp (18)": () => "&tls.SCTExtension{}",
+    // This might need fix
+    "padding (21)": () => "&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle}",
     "extended_master_secret (23)": () => "&tls.ExtendedMasterSecretExtension{}",
     "compress_certificate (27)": () => `&tls.UtlsCompressCertExtension{[]tls.CertCompressionAlgo{${expressionIndent(ext.algorithms.map(a => `${certCompressionMapping[getIntVal(a)] || getIntVal(a) + ` /* ${a} */`}`), 6)}}}`,
     "record_size_limit (28)": () => `&tls.FakeRecordSizeLimitExtension{${"0x" + parseInt(ext.data).toString(16)}}`,
+    "delegated_credentials (34)": () => `&tls.DelegatedCredentialsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{${expressionIndent(ext.signature_hash_algorithms.map(a => `${signatureSchemeMapping[a] || "tls.NotImplemented" + ` /* ${a} */`}`), 6)}}}`,
     "session_ticket (35)": () => `&tls.SessionTicketExtension{}`,
     "pre_shared_key (41)": () => "&tls.UtlsPreSharedKeyExtension{OmitEmptyPsk: true}",
     "supported_versions (43)": () => `&tls.SupportedVersionsExtension{[]uint16{${expressionIndent(ext.versions.filter(v => typeof v === "string").map(v => v.startsWith("TLS_GREASE") ? `tls.GREASE_PLACEHOLDER` : supportedVersionsMapping[v]), 6)}}}`,

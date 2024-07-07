@@ -48,6 +48,12 @@ const curveIDMapping = {
   29: "tls.X25519",
   256: "tls.FAKEFFDHE2048",
   257: "tls.FAKEFFDHE3072",
+
+  0xfe30: "tls.X25519Kyber512Draft00",
+  0x6399: "tls.X25519Kyber768Draft00",
+  0xfe31: "tls.X25519Kyber768Draft00Old",
+  0xfe32: "tls.P256Kyber768Draft00",
+  0: "tls.NotImplemented",
 };
 
 const specialCipherSuites = {

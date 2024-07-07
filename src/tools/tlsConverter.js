@@ -1,5 +1,5 @@
-const arrayNoatation = (arr) => arr.map((e) => `"${e}"`).join(", ");
-const arrayNoatationIndent = (arr, startAt) => "\n" + "\t".repeat(startAt) + arr.map((e) => `"${e}"`).join(`,\n${"\t".repeat(startAt)}`) + ",\n" + "\t".repeat(startAt - 1);
+const stringArrayNoatation = (arr) => arr.map((e) => `"${e}"`).join(", ");
+const stringArrayNoatationIndent = (arr, startAt) => "\n" + "\t".repeat(startAt) + arr.map((e) => `"${e}"`).join(`,\n${"\t".repeat(startAt)}`) + ",\n" + "\t".repeat(startAt - 1);
 const expressionIndent = (arr, startAt) => "\n" + "\t".repeat(startAt) + arr.join(`,\n${"\t".repeat(startAt)}`) + ",\n" + "\t".repeat(startAt - 1);
 
 const h2SettingsMapping = {
@@ -31,9 +31,9 @@ const renegotiationMapping = {
 };
 
 const certCompressionMapping = {
-  0x0001: "tls.CertCompressionZlib",
-  0x0002: "tls.CertCompressionBrotli",
-  0x0003: "tls.CertCompressionZstd",
+  1: "tls.CertCompressionZlib",
+  2: "tls.CertCompressionBrotli",
+  3: "tls.CertCompressionZstd",
 };
 
 const pskModeMapping = {
@@ -101,15 +101,15 @@ const parseTLSExtension = (ext) => {
     "status_request (5)": () => `&tls.StatusRequestExtension{}`,
     "supported_groups (10)": () => `&tls.SupportedCurvesExtension{[]tls.CurveID{${expressionIndent(ext.supported_groups.filter(v => typeof v === "string").map(v => v.startsWith("TLS_GREASE") ? `tls.CurveID(tls.GREASE_PLACEHOLDER)` : (curveIDMapping[getIntVal(v)] || `${getIntVal(v)} /* ${v} */`)), 6)}}}`,
     "ec_point_formats (11)": () => `&tls.SupportedPointsExtension{SupportedPoints: []byte{${ext.elliptic_curves_point_formats.filter(v => typeof v === "string").map(v => v.startsWith("TLS_GREASE") ? `tls.GREASE_PLACEHOLDER` : v).join(", ")}}}`,
-    "signature_algorithms (13)": () => `&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{${expressionIndent(ext.signature_algorithms.filter(v => typeof v === "string").map(v => signatureSchemeMapping[v] || `tls.NotImplemented /* ${v} */`), 6)}}}`,
-    "application_layer_protocol_negotiation (16)": () => `&tls.ALPNExtension{AlpnProtocols: []string{${arrayNoatation(ext.protocols)}}}`,
+    "signature_algorithms (13)": () => `&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{${expressionIndent(ext.signature_algorithms.filter(v => typeof v === "string").map(v => signatureSchemeMapping[v] || v), 6)}}}`,
+    "application_layer_protocol_negotiation (16)": () => `&tls.ALPNExtension{AlpnProtocols: []string{${stringArrayNoatation(ext.protocols)}}}`,
     "signed_certificate_timestamp (18)": () => "&tls.SCTExtension{}",
     "extended_master_secret (23)": () => "&tls.ExtendedMasterSecretExtension{}",
-    "compress_certificate (27)": () => `&tls.UtlsCompressCertExtension{[]tls.CertCompressionAlgo{${expressionIndent(ext.algorithms.map(a => `${certCompressionMapping[getIntVal(a)] || 0}`), 6)}}}`,
+    "compress_certificate (27)": () => `&tls.UtlsCompressCertExtension{[]tls.CertCompressionAlgo{${expressionIndent(ext.algorithms.map(a => `${certCompressionMapping[getIntVal(a)] || getIntVal(a) + ` /* ${a} */`}`), 6)}}}`,
     "session_ticket (35)": () => `&tls.SessionTicketExtension{}`,
     "pre_shared_key (41)": () => "&tls.UtlsPreSharedKeyExtension{OmitEmptyPsk: true}",
     "supported_versions (43)": () => `&tls.SupportedVersionsExtension{[]uint16{${expressionIndent(ext.versions.filter(v => typeof v === "string").map(v => v.startsWith("TLS_GREASE") ? `tls.GREASE_PLACEHOLDER` : supportedVersionsMapping[v]), 6)}}}`,
-    "psk_key_exchange_modes (45)": () => `&tls.PSKKeyExchangeModesExtension{[]uint8{${expressionIndent([pskModeMapping[getIntVal(ext.PSK_Key_Exchange_Mode)] || 0], 6)}}}`,
+    "psk_key_exchange_modes (45)": () => `&tls.PSKKeyExchangeModesExtension{[]uint8{${expressionIndent([pskModeMapping[getIntVal(ext.PSK_Key_Exchange_Mode)] || getIntVal(ext.PSK_Key_Exchange_Mode)], 6)}}}`,
     "key_share (51)": () => `&tls.KeyShareExtension{[]tls.KeyShare{${expressionIndent(ext.shared_keys.map(k => {
       const key = Object.keys(k)[0];
       let group = getIntVal(key);
@@ -118,9 +118,9 @@ const parseTLSExtension = (ext) => {
       if (curveIDMapping[group]) { group = curveIDMapping[group] } else { group = group + ` /* ${key} */` };
       return `{Group: ${group}}`;
     }), 6)}}}`,
-    "application_settings (17513)": () => `&tls.ApplicationSettingsExtension{SupportedProtocols: []string{${arrayNoatation(ext.protocols)}}}`,
+    "application_settings (17513)": () => `&tls.ApplicationSettingsExtension{SupportedProtocols: []string{${stringArrayNoatation(ext.protocols)}}}`,
     "extensionEncryptedClientHello (boringssl) (65037)": () => `tls.BoringGREASEECH()`,
-    "extensionRenegotiationInfo (boringssl) (65281)": () => `&tls.RenegotiationInfoExtension{Renegotiation: ${renegotiationMapping[parseInt(ext.data)] || 0}}`,
+    "extensionRenegotiationInfo (boringssl) (65281)": () => `&tls.RenegotiationInfoExtension{Renegotiation: ${renegotiationMapping[parseInt(ext.data)] || parseInt(ext.data)}}`,
   };
 
   return extensionParsers[ext.name] ? extensionParsers[ext.name]() : `&tls.NotImplemented{/* ${JSON.stringify(ext)} */}`;
@@ -158,7 +158,8 @@ export default (input) => {
 
   const extensions = input.tls.extensions.map((e) => parseTLSExtension(e));
 
-  return `import (
+  return `
+import (
     "github.com/bogdanfinn/tls-client/profiles"
     "github.com/bogdanfinn/fhttp/http2"
     tls "github.com/bogdanfinn/utls"
@@ -172,7 +173,7 @@ var MyCustomProfile = profiles.NewClientProfile(
 		SpecFactory: func() (tls.ClientHelloSpec, error) {
 			return tls.ClientHelloSpec{
 				CipherSuites:       []uint16{${expressionIndent(ciphers, 5)}},
-\t\t\t\t// CompressionMethods is not implemented by tls.peet.ws, check manually
+${"\t\t\t\t"}// CompressionMethods is not implemented by tls.peet.ws, check manually
 				CompressionMethods: []uint8{${expressionIndent(["tls.CompressionNone"], 5)}},
 				Extensions:         []tls.TLSExtension{${expressionIndent(extensions, 5)}},
 			}, nil
@@ -180,14 +181,15 @@ var MyCustomProfile = profiles.NewClientProfile(
 	},
 	map[http2.SettingID]uint32{${expressionIndent(h2Settings.map((e) => `${e.key}: ${e.value}`), 2)}}, 
 	[]http2.SettingID{${expressionIndent(h2Settings.map((e) => e.key), 2)}},
-	[]string{${arrayNoatationIndent(h2PseudoHeaderOrder, 2)}},
-	${h2ConnectionFlow},
-\t// Priority is not implemented by tls.peet.ws, check manually
+	[]string{${stringArrayNoatationIndent(h2PseudoHeaderOrder, 2)}},
+	uint32(${h2ConnectionFlow}),
+${"\t"}// Priority is not implemented by tls.peet.ws, check manually
 	[]http2.Priority{},
-	&http2.PriorityParam{
-\t\tStreamDep: ${h2HeaderPrio.depends_on || 0},
-\t\tExclusive: ${h2HeaderPrio.exclusive === 1}, 
-\t\tWeight: ${h2HeaderPrio.weight - 1 || 0}, 
-\t},
-)`;
+${"\t"}&http2.PriorityParam{
+${"\t\t"}StreamDep: ${h2HeaderPrio.depends_on || 0},
+${"\t\t"}Exclusive: ${h2HeaderPrio.exclusive === 1},
+${"\t\t"}Weight: ${h2HeaderPrio.weight - 1 || 0},
+${"\t"}},
+)
+`.trimStart().trimEnd();
 };

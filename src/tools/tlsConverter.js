@@ -177,6 +177,7 @@ const parseTLSExtension = (ext) => {
     "signature_algorithms (13)": () => `&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{${expressionIndent(ext.signature_algorithms.filter(v => typeof v === "string").map(v => signatureSchemeMapping[v] || "tls.NotImplemented" + ` /* ${v} */`), 6)}}}`,
     "application_layer_protocol_negotiation (16)": () => `&tls.ALPNExtension{AlpnProtocols: []string{${stringArrayNoatation(ext.protocols)}}}`,
     "signed_certificate_timestamp (18)": () => "&tls.SCTExtension{}",
+    //According to utls, if willPad is false, GetPaddingLen should not be included.
     "padding (21)": () => `&tls.UtlsPaddingExtension{PaddingLen: ${toHexString(ext.padding_data_length + 0, 2)}}`,
     "extended_master_secret (23)": () => "&tls.ExtendedMasterSecretExtension{}",
     "compress_certificate (27)": () => `&tls.UtlsCompressCertExtension{[]tls.CertCompressionAlgo{${expressionIndent(ext.algorithms.map(a => `${certCompressionMapping[getParenthesisInteger(a)] || toHexString(getParenthesisInteger(a), 2) + ` /* ${a} */`}`), 6)}}}`,

@@ -119,7 +119,6 @@ const parseTLSExtension = (ext) => {
     // This might need fix
     "padding (21)": () => "&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle}",
     "extended_master_secret (23)": () => "&tls.ExtendedMasterSecretExtension{}",
-    "signature_algorithms_cert (50)": () => `&tls.SignatureAlgorithmsCertExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{ /* Not implemented in tls.peet.ws - raw data: ${JSON.stringify(ext.data)} */}}`,
     "compress_certificate (27)": () =>
       `&tls.UtlsCompressCertExtension{[]tls.CertCompressionAlgo{${expressionIndent(
         ext.algorithms.map((a) => `${certCompressionMapping[getIntVal(a)] || getIntVal(a) + ` /* ${a} */`}`),
@@ -139,6 +138,7 @@ const parseTLSExtension = (ext) => {
         6
       )}}}`,
     "psk_key_exchange_modes (45)": () => `&tls.PSKKeyExchangeModesExtension{[]uint8{${expressionIndent([pskModeMapping[getIntVal(ext.PSK_Key_Exchange_Mode)] || getIntVal(ext.PSK_Key_Exchange_Mode)], 6)}}}`,
+    "signature_algorithms_cert (50)": () => `&tls.SignatureAlgorithmsCertExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{ /* Not implemented in tls.peet.ws - raw data: ${JSON.stringify(ext.data)} */}}`,
     "key_share (51)": () =>
       `&tls.KeyShareExtension{[]tls.KeyShare{${expressionIndent(
         ext.shared_keys.map((k) => {

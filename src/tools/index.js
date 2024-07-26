@@ -5,11 +5,8 @@ import LZString from "lz-string";
 import tlsConverter from "./tlsConverter";
 
 function extractKey(script) {
-  const split = script.match(/en-us(.)/)[1];
-  const regex = new RegExp(
-    `\\${split}([a-zA-Z0-9\\+\\-\\$]{65})\\${split}`,
-    "i"
-  );
+  const split = script.match(/spinner-please-wait(.)/)[1];
+  const regex = new RegExp(`\\${split}([a-zA-Z0-9\\+\\-\\$]{65})\\${split}`, "i");
   return script.match(regex)[1];
 }
 
@@ -30,9 +27,7 @@ const LZ = {
   },
   decompress: (input, key) => {
     input = input.replace(/ /g, "+");
-    return LZString._decompress(input.length, 32, (index) =>
-      getBaseValue(key, input.charAt(index))
-    );
+    return LZString._decompress(input.length, 32, (index) => getBaseValue(key, input.charAt(index)));
   },
 };
 
@@ -88,12 +83,7 @@ const tools = [
     name: "rot13",
     title: "Rot13 decoder",
     subtitle: "An utility for encoding/decoding Rot13 encrypted text",
-    func: (i) =>
-      i.replace(/[a-z]/gi, (letter) =>
-        String.fromCharCode(
-          letter.charCodeAt(0) + (letter.toLowerCase() <= "m" ? 13 : -13)
-        )
-      ),
+    func: (i) => i.replace(/[a-z]/gi, (letter) => String.fromCharCode(letter.charCodeAt(0) + (letter.toLowerCase() <= "m" ? 13 : -13))),
     placeholder: "Uryyb, jbeyq!",
     type: ToolType.GENERAL,
   },
@@ -118,8 +108,7 @@ const tools = [
   {
     name: "uuid_analyzer",
     title: "UUID analyzer",
-    subtitle:
-      "An utility for getting all information out of an UUID (timestamp + version)",
+    subtitle: "An utility for getting all information out of an UUID (timestamp + version)",
     similar: ["jwt_decoder"],
     func: (i) => {
       if (i.length !== 36) return "Invalid UUID";
@@ -138,16 +127,8 @@ const tools = [
     subtitle: "An utility for decoding a JSON Web Token (JWT)",
     similar: ["uuid_analyzer"],
     func: (i) => {
-      const meta = JSON.stringify(
-        JSON.parse(atob(i.split(".")[0])),
-        null,
-        "\t"
-      );
-      const main = JSON.stringify(
-        JSON.parse(atob(i.split(".")[1])),
-        null,
-        "\t"
-      );
+      const meta = JSON.stringify(JSON.parse(atob(i.split(".")[0])), null, "\t");
+      const main = JSON.stringify(JSON.parse(atob(i.split(".")[1])), null, "\t");
       return `Meta information:\n${meta}\n\nEncoded data:\n${main}`;
     },
     placeholder:
@@ -157,14 +138,8 @@ const tools = [
   {
     name: "header_formatter",
     title: "Header to code",
-    subtitle:
-      "An utility for converting raw HTTP headers (for example from charles) to a JSON object",
-    similar: [
-      "uuid_analyzer",
-      "jwt_decoder",
-      "js_formatter",
-      "header_formatter_fhttp",
-    ],
+    subtitle: "An utility for converting raw HTTP headers (for example from charles) to a JSON object",
+    similar: ["uuid_analyzer", "jwt_decoder", "js_formatter", "header_formatter_fhttp"],
     func: headerToCode,
     placeholder: `GET  /tools/header_formatter HTTP/1.1\nHost: tools.peet.ws\nHello: World!`,
     type: ToolType.GENERAL,
@@ -174,15 +149,8 @@ const tools = [
   {
     name: "header_formatter_fhttp",
     title: "Header to code (fhttp)",
-    subtitle:
-      "An utility for converting raw HTTP headers (for example from charles) to valid Golang code (fhttp library)",
-    similar: [
-      "header_formatter",
-      "uuid_analyzer",
-      "jwt_decoder",
-      "js_formatter",
-      "tls_converter",
-    ],
+    subtitle: "An utility for converting raw HTTP headers (for example from charles) to valid Golang code (fhttp library)",
+    similar: ["header_formatter", "uuid_analyzer", "jwt_decoder", "js_formatter", "tls_converter"],
     func: (i) => {
       const h = JSON.parse(headerToCode(i));
 
@@ -203,8 +171,7 @@ const tools = [
   {
     name: "js_deobfuscator",
     title: "JavaScript deobfuscator",
-    subtitle:
-      "An utility that converts ugly JavaScript into more readable code",
+    subtitle: "An utility that converts ugly JavaScript into more readable code",
     similar: ["js_formatter", "json_formatter"],
     func: deobfuscate,
     config: [
@@ -253,10 +220,7 @@ const tools = [
     config: [{ title: "Encryption key or script", name: "key", val: "" }],
     func: (rawPayload, cnfg = {}) => {
       let key = cnfg.key.length === 65 ? cnfg.key : extractKey(cnfg.key);
-      let payload = rawPayload
-        .split("=")[1]
-        .replaceAll("%2b", "+")
-        .replaceAll(" ", "+");
+      let payload = rawPayload.split("=")[1].replaceAll("%2b", "+").replaceAll(" ", "+");
 
       const res = LZ.decompress(payload, key);
       if (!res) return "Invalid key for payload";
@@ -266,8 +230,7 @@ const tools = [
   {
     name: "tls_converter",
     title: "JSON to uTLS",
-    subtitle:
-      "Convert JSON responses from tls.peet.ws/api/all to client profiles for github.com/bogdanfinn/tls-client",
+    subtitle: "Convert JSON responses from tls.peet.ws/api/all to client profiles for github.com/bogdanfinn/tls-client",
     similar: ["header_formatter_fhttp"],
     type: ToolType.ANTIBOT,
     func: (rawPayload, cnfg = {}) => {
@@ -283,15 +246,13 @@ const tools = [
   // == EXTERNAL ==
   {
     title: "decode.antibot.to",
-    subtitle:
-      "Collection of open-source tools and ressources to help reverse-engineering",
+    subtitle: "Collection of open-source tools and ressources to help reverse-engineering",
     link: "https://decode.antibot.to/",
     type: ToolType.EXTERNAL,
   },
   {
     title: "RegExr",
-    subtitle:
-      "RegExr is an online tool to learn, build, & test Regular Expressions (RegEx / RegExp)",
+    subtitle: "RegExr is an online tool to learn, build, & test Regular Expressions (RegEx / RegExp)",
     link: "https://regexr.com/",
     type: ToolType.EXTERNAL,
   },
@@ -304,15 +265,13 @@ const tools = [
   },
   {
     title: "TrackMe: Request fingerprinting demo",
-    subtitle:
-      "tls.peet.ws: find out what fingerprints your browser leaves on the web",
+    subtitle: "tls.peet.ws: find out what fingerprints your browser leaves on the web",
     link: "https://tls.peet.ws",
     type: ToolType.EXTERNAL,
   },
   {
     title: "CyberChef",
-    subtitle:
-      "The Cyber Swiss Army Knife, allows you to combine ~300 text operations",
+    subtitle: "The Cyber Swiss Army Knife, allows you to combine ~300 text operations",
     link: "https://gchq.github.io/CyberChef/",
     type: ToolType.EXTERNAL,
   },

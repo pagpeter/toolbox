@@ -281,6 +281,12 @@ const tools = [
     link: "https://github.com/bogdanfinn/tls-client",
     type: ToolType.EXTERNAL,
   },
+  {
+    title: "Text difference checker",
+    subtitle: "Git-style diff checker",
+    link: "https://platform.text.com/tools/diff-checker",
+    type: ToolType.EXTERNAL,
+  },
 ];
 
 export default () => {

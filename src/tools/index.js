@@ -5,9 +5,16 @@ import LZString from "lz-string";
 import tlsConverter from "./tlsConverter";
 
 function extractKey(script) {
-  const split = script.match(/spinner-please-wait(.)/)[1];
-  const regex = new RegExp(`\\${split}([a-zA-Z0-9\\+\\-\\$]{65})\\${split}`, "i");
-  return script.match(regex)[1];
+  let split = script.match(/(?<=encode)([^a-zA-Z0-9\s]+)/g);
+  if(split && split.length > 0){
+    split = split[0];
+    const regex = new RegExp(`\\${split}([a-zA-Z0-9\\+\\-\\$]{65})\\${split}`, "i");
+    const key = script.match(regex);
+    if(key && key.length > 1){
+      return key[1];
+    }
+  }
+  throw new Error("Encrypted Key not found.")
 }
 
 function getBaseValue(alphabet, character) {

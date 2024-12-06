@@ -5,9 +5,15 @@ import LZString from "lz-string";
 import tlsConverter from "./tlsConverter";
 
 function extractKey(script) {
-  const split = script.match(/spinner-please-wait(.)/)[1];
-  const regex = new RegExp(`\\${split}([a-zA-Z0-9\\+\\-\\$]{65})\\${split}`, "i");
-  return script.match(regex)[1];
+  try {
+    const split = script.match(/querySelector(.)/)[1];
+    const regex = new RegExp(`\\${split}([a-zA-Z0-9\\+\\-\\$]{65})\\${split}`, "i");
+    const key = script.match(regex)[1];
+    console.log("Key:", key);
+    return key;
+  } catch {
+    throw new Error("Could not parse key");
+  }
 }
 
 function getBaseValue(alphabet, character) {
@@ -219,12 +225,21 @@ const tools = [
     type: ToolType.ANTIBOT,
     config: [{ title: "Encryption key or script", name: "key", val: "" }],
     func: (rawPayload, cnfg = {}) => {
-      let key = cnfg.key.length === 65 ? cnfg.key : extractKey(cnfg.key);
-      let payload = rawPayload.split("=")[1].replaceAll("%2b", "+").replaceAll(" ", "+");
+      let key;
+      try {
+        key = cnfg.key.length === 65 ? cnfg.key : extractKey(cnfg.key);
+      } catch {
+        return "Could not parse key";
+      }
+      try {
+        let payload = rawPayload.split("=")[1].replaceAll("%2b", "+").replaceAll(" ", "+");
 
-      const res = LZ.decompress(payload, key);
-      if (!res) return "Invalid key for payload";
-      return JSON.stringify(JSON.parse(res), null, "\t");
+        const res = LZ.decompress(payload, key);
+        if (!res) return "Invalid key for payload";
+        return JSON.stringify(JSON.parse(res), null, "\t");
+      } catch {
+        return `Parsed key as ${key} but could not decode payload`;
+      }
     },
   },
   {

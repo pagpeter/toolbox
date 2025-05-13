@@ -170,23 +170,49 @@ const parseCipherSuite = (c) => {
   else return "tls." + c;
 };
 
+const parseHTTP = (input) => {
+  const result = { h2HeaderPrio: 1, h2Settings: [], h2PseudoHeaderOrder: [], h2ConnectionFlow: [] };
+
+  if (input.http_version == "h2") {
+    const h2HeadersFrame = input.http2?.sent_frames?.find((f) => f.frame_type === "HEADERS") || {};
+
+    result.h2PseudoHeaderOrder = h2HeadersFrame.headers.filter((h) => h.startsWith(":"))?.map((h) => h.split(": ")[0]) || [];
+    result.h2HeaderPrio = h2HeadersFrame.priority || {};
+    result.h2ConnectionFlow = input.http2?.sent_frames?.find((f) => f.frame_type === "WINDOW_UPDATE")?.increment || 0;
+    result.h2Settings =
+      input.http2?.sent_frames
+        ?.find((f) => f.frame_type === "SETTINGS")
+        ?.settings?.map((e) => e.split(" = "))
+        ?.map((s) => ({ key: h2SettingsMapping[s[0]], value: parseInt(s[1]) })) || [];
+  }
+
+  return result;
+};
+
 export default (input) => {
   const ciphers = input.tls.ciphers.map((e) => parseCipherSuite(e));
-  const h2HeadersFrame = input.http2?.sent_frames?.find((f) => f.frame_type === "HEADERS") || {};
-
-  const h2PseudoHeaderOrder = h2HeadersFrame.headers.filter((h) => h.startsWith(":"))?.map((h) => h.split(": ")[0]) || [];
-
-  const h2HeaderPrio = h2HeadersFrame.priority || {};
-
-  const h2ConnectionFlow = input.http2?.sent_frames?.find((f) => f.frame_type === "WINDOW_UPDATE")?.increment || 0;
-
-  const h2Settings =
-    input.http2?.sent_frames
-      ?.find((f) => f.frame_type === "SETTINGS")
-      ?.settings?.map((e) => e.split(" = "))
-      ?.map((s) => ({ key: h2SettingsMapping[s[0]], value: parseInt(s[1]) })) || [];
-
+  const http = parseHTTP(input);
+  const ish2 = input.http_version == "h2";
   const extensions = input.tls.extensions.map((e) => parseTLSExtension(e));
+
+  const http2Settings = `,
+	map[http2.SettingID]uint32{${expressionIndent(
+    http.h2Settings.map((e) => `${e.key}: ${e.value}`),
+    2
+  )}}, 
+	[]http2.SettingID{${expressionIndent(
+    http.h2Settings.map((e) => e.key),
+    2
+  )}},
+	[]string{${stringArrayNoatationIndent(http.h2PseudoHeaderOrder, 2)}},
+	uint32(${http.h2ConnectionFlow}),
+${"\t"}// Priority is not implemented by tls.peet.ws, check manually
+	[]http2.Priority{},
+${"\t"}&http2.PriorityParam{
+${"\t\t"}StreamDep: ${http.h2HeaderPrio.depends_on || 0},
+${"\t\t"}Exclusive: ${http.h2HeaderPrio.exclusive === 1},
+${"\t\t"}Weight: ${http.h2HeaderPrio.weight - 1 || 0},
+${"\t"}},`;
 
   return `
 import (
@@ -208,24 +234,8 @@ ${"\t\t\t\t"}// CompressionMethods is not implemented by tls.peet.ws, check manu
 				Extensions:         []tls.TLSExtension{${expressionIndent(extensions, 5)}},
 			}, nil
 		},
-	},
-	map[http2.SettingID]uint32{${expressionIndent(
-    h2Settings.map((e) => `${e.key}: ${e.value}`),
-    2
-  )}}, 
-	[]http2.SettingID{${expressionIndent(
-    h2Settings.map((e) => e.key),
-    2
-  )}},
-	[]string{${stringArrayNoatationIndent(h2PseudoHeaderOrder, 2)}},
-	uint32(${h2ConnectionFlow}),
-${"\t"}// Priority is not implemented by tls.peet.ws, check manually
-	[]http2.Priority{},
-${"\t"}&http2.PriorityParam{
-${"\t\t"}StreamDep: ${h2HeaderPrio.depends_on || 0},
-${"\t\t"}Exclusive: ${h2HeaderPrio.exclusive === 1},
-${"\t\t"}Weight: ${h2HeaderPrio.weight - 1 || 0},
-${"\t"}},
+	}
+    ${ish2 ? http2Settings : ""}
 )
 `
     .trimStart()

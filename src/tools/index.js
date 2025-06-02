@@ -232,8 +232,11 @@ const tools = [
         return "Could not parse key";
       }
       try {
-        let payload = rawPayload.split("=")[1].replaceAll("%2b", "+").replaceAll(" ", "+");
-
+        let payload = rawPayload;
+        try {
+          payload = rawPayload.split("=")[1].replaceAll("%2b", "+").replaceAll(" ", "+");
+        catch {}
+        
         const res = LZ.decompress(payload, key);
         if (!res) return "Invalid key for payload";
         return JSON.stringify(JSON.parse(res), null, "\t");

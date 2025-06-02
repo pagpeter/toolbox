@@ -235,7 +235,7 @@ const tools = [
         let payload = rawPayload;
         try {
           payload = rawPayload.split("=")[1].replaceAll("%2b", "+").replaceAll(" ", "+");
-        catch {}
+        } catch {}
         
         const res = LZ.decompress(payload, key);
         if (!res) return "Invalid key for payload";

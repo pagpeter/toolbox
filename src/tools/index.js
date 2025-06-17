@@ -205,8 +205,8 @@ const tools = [
   // },
   {
     name: "cf_encoder",
-    title: "CloudFlare encoder",
-    subtitle: "Encode CloudFlare payloads using your custom key (lz-encrypt)",
+    title: "Cloudflare encoder",
+    subtitle: "Encode Cloudflare payloads using your custom key (lz-encrypt)",
     similar: ["cf_decoder"],
     config: [{ title: "Encryption key or script", name: "key", val: "" }],
     type: ToolType.ANTIBOT,
@@ -219,7 +219,7 @@ const tools = [
   },
   {
     name: "cf_decoder",
-    title: "CloudFlare decoder",
+    title: "Cloudflare decoder",
     subtitle: "Decode Cloudflare payloads using a custom key (lz-encrypt)",
     similar: ["cf_encoder"],
     type: ToolType.ANTIBOT,

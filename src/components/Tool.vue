@@ -4,8 +4,11 @@ import { ref, onMounted, watch, nextTick } from "vue";
 import TextField from "./utils/TextField.vue";
 import ToolField from "./utils/ToolField.vue";
 import Tools from "../tools";
+
 const tools = Tools();
 const value = ref("");
+const computedValue = ref("");
+const isLoading = ref(false);
 let similarOnes = [];
 let tool = ref({});
 
@@ -22,21 +25,35 @@ const getInputType = (i) => {
   }
 };
 
-const computeVal = (input) => {
-  if (!input) return "";
+const computeVal = async (input) => {
+  if (!input) {
+    computedValue.value = "";
+    return;
+  }
+  
   try {
+    isLoading.value = true;
     const cnfg = {};
     if (tool.value?.config)
       tool.value?.config?.forEach((e) => (cnfg[e.name] = e.val));
-    return tool.value.func(input, cnfg);
+    
+    const result = await tool.value.func(input, cnfg);
+    computedValue.value = result;
   } catch (e) {
-    return e.message;
+    computedValue.value = e.message;
+  } finally {
+    isLoading.value = false;
   }
 };
+
+// Watch for changes and compute async
+watch(value, () => computeVal(value.value));
+watch(() => tool.value?.config, () => computeVal(value.value), { deep: true });
 
 const mount = (route) => {
   tool = ref(route?.meta.tool);
   similarOnes = tool.value.similar?.map((s) => tools.find((x) => s === x.name));
+  computeVal(value.value);
 };
 
 mount(useRoute());
@@ -47,9 +64,7 @@ watch(route, () => mount(route));
 <template>
   <div>
     <h1 class="text-3xl text-center m-5 font-black">{{ tool.title }}</h1>
-    <router-link class="text-xl text-center m-5 font-bold" to="/"
-      >Home</router-link
-    >
+    <router-link class="text-xl text-center m-5 font-bold" to="/">Home</router-link>
 
     <div class="grid grid-cols-2 gap-2 m-2">
       <TextField
@@ -59,8 +74,8 @@ watch(route, () => mount(route));
       />
       <TextField
         class="m-2 text-center"
-        :set-value="computeVal(value)"
-        :placeholder="computeVal(tool.placeholder)"
+        :set-value="isLoading ? 'Loading...' : computedValue"
+        :placeholder="tool.placeholder"
         disabled="true"
       />
     </div>
@@ -73,7 +88,7 @@ watch(route, () => mount(route));
           :key="cnfg.name"
           @click="
             typeof cnfg.val === 'boolean'
-              ? ((cnfg.val = !cnfg.val), nextTick(computeVal, 50))
+              ? (cnfg.val = !cnfg.val)
               : null
           "
           :class="`m-2 grid ${

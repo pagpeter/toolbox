@@ -61,6 +61,22 @@ function getKey(customKeyInput) {
   return new Uint8Array(keyArray);
 }
 
+function formatAndSort(input) {
+  try {
+    const parsed = JSON.parse(input);
+
+    try {
+      if (Array.isArray(parsed?.events)) parsed.events = parsed.events.sort((a, b) => a[0] - b[0]);
+    } catch {}
+
+    return JSON.stringify(parsed, null, 2);
+  } catch (e) {
+    console.log(e)
+    // If it's not valid JSON, return the input as-is
+    return input;
+  }
+}
+
 async function AESGCMencryptData(plaintext, config) {
   const key = getKey(config.key);
   if (!key) return;
@@ -93,7 +109,7 @@ async function AESGCMdecryptData(encryptedInput, config) {
   const cryptoKey = await crypto.subtle.importKey("raw", key, { name: "AES-GCM" }, false, ["decrypt"]);
   const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, cryptoKey, combinedData);
   const decryptedText = new TextDecoder().decode(decrypted);
-  return decryptedText;
+  return formatAndSort(decryptedText);
 }
 
 const tools = [
@@ -237,27 +253,23 @@ const tools = [
     placeholder: `const a = 0x0;\nconst b = 0x125;\nconst s = " ";\nconsole.log("Hell"+a*b+s+"w"+(b-b)+"rld");`,
     type: ToolType.ANTIBOT,
   },
-    {
+  {
     name: "aes-gcm-encrypt",
     title: "AES-GCM Encrypt",
     subtitle: "An utility that can encrypt using AES-GCM with a custom key. Used by some antibots, which like to sue you if you mention them.",
     similar: ["aes-gcm-decrypt"],
     func: AESGCMencryptData,
-    config: [
-      { title: "Decryption key", name: "key", val: "48, 174, 137, 138, 134, 125, 45, 5, 20, 156, 233, 94, 133, 192, 55, 42,196, 197, 155, 237, 108, 44, 168, 232, 89, 152, 138, 44, 21, 60, 197, 150" },
-    ],
+    config: [{ title: "Decryption key", name: "key", val: "48, 174, 137, 138, 134, 125, 45, 5, 20, 156, 233, 94, 133, 192, 55, 42,196, 197, 155, 237, 108, 44, 168, 232, 89, 152, 138, 44, 21, 60, 197, 150" }],
     placeholder: `Input data to get started`,
     type: ToolType.ANTIBOT,
   },
-      {
+  {
     name: "aes-gcm-decrypt",
     title: "AES-GCM Decrypt",
     subtitle: "An utility that can decrypt using AES-GCM with a custom key. Used by some antibots, which like to sue you if you mention them.",
     similar: ["aes-gcm-encrypt"],
     func: AESGCMdecryptData,
-    config: [
-      { title: "Encryption key", name: "key", val: "48, 174, 137, 138, 134, 125, 45, 5, 20, 156, 233, 94, 133, 192, 55, 42,196, 197, 155, 237, 108, 44, 168, 232, 89, 152, 138, 44, 21, 60, 197, 150" },
-    ],
+    config: [{ title: "Encryption key", name: "key", val: "48, 174, 137, 138, 134, 125, 45, 5, 20, 156, 233, 94, 133, 192, 55, 42,196, 197, 155, 237, 108, 44, 168, 232, 89, 152, 138, 44, 21, 60, 197, 150" }],
     placeholder: `Input data to get started`,
     type: ToolType.ANTIBOT,
   },
